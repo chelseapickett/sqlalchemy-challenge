@@ -2,10 +2,11 @@
 import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, func, inspect
 from flask import Flask, jsonify
 import datetime as dt
 import json as json
+import numpy as np
 
 #################################################
 # Database Setup
@@ -32,6 +33,16 @@ app = Flask(__name__)
 #################################################
 # Flask Routes
 #################################################
+
+@app.route("/")
+def welcome():
+    return (
+        f"Module 10 Challenge Climate App<br/>"
+        f"Available Routes:<br/>"
+        f"/precipitation/<br/>"
+        f"/stations/<br/>"
+        f"/tobs/<br/>"
+    )
 
 
 @app.route("/precipitation/")
@@ -95,10 +106,33 @@ def tobs():
     print("Server received request for 'tobs' page...")
     return jsonify(station_freq_list)
 
-# @app.route("/jsonified")
-# def jsonified():
-#     return 
+@app.route("/api/v1.0/<start_date>")
+def start(start_date=None):
 
+     #create session from Python to the DB
+    session = Session(engine)
+    #return 
+    start_date = dt.datetime.strptime(start_date, "%Y%m%d")
+    #query
+    results = session.query(measurement.tobs).\
+    filter(measurement.date == start_date).all()
+    
+    results = session.query(func.min(measurement.tobs),\
+            func.avg(measurement.tobs),\
+            func.max(measurement.tobs)).\
+            filter(measurement.date >= start_date).all()
+    
+   
+    results_list = list(np.ravel(results))
+    # for each in results:
+    #    results_list.append(each[0])
+    
+    #close session
+    session.close()
+   
+
+    print("Server received request for 'start' page...")
+    return jsonify(results_list)
     
 if __name__ == "__main__":
     app.run(debug=True)
