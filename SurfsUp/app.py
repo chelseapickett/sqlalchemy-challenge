@@ -133,6 +133,39 @@ def start(start_date=None):
 
     print("Server received request for 'start' page...")
     return jsonify(results_list)
+
+#For the start/end route, it is pretty much the exact same steps, except you add 
+# the end_date parameter to the route, the function defitinition, and the filter. 
+# You just also have to make sure that you also convert the end_date variable to a 
+# datetime datatype like you did for start_date
+@app.route("/api/v1.0/<start_date><end_date>")
+def start_end(start_date_end_date=None):
+
+     #create session from Python to the DB
+    session = Session(engine)
+    #return 
+    start_date_end_date = dt.datetime.strptime(start_date_end_date, "%Y%m%d")
+    #query
+    results = session.query(measurement.tobs).\
+    filter(measurement.date == start_date_end_date).all()
     
+    results = session.query(func.min(measurement.tobs),\
+            func.avg(measurement.tobs),\
+            func.max(measurement.tobs)).\
+            filter(measurement.date >= start_date).\
+            filter(measurement.date <= start_date).all()
+    
+   
+    results_list = list(np.ravel(results))
+    # for each in results:
+    #    results_list.append(each[0])
+    
+    #close session
+    session.close()
+   
+
+    print("Server received request for 'start' page...")
+    return jsonify(results_list)
+
 if __name__ == "__main__":
     app.run(debug=True)
