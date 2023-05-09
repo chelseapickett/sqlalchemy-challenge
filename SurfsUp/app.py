@@ -11,7 +11,7 @@ import numpy as np
 #################################################
 # Database Setup
 #################################################
-engine = create_engine("sqlite:///./Resources/hawaii.sqlite", echo=False)
+engine = create_engine("sqlite:///Resources/hawaii.sqlite", echo=False)
 
 # reflect an existing database into a new model
 Base = automap_base()
@@ -39,13 +39,15 @@ def welcome():
     return (
         f"Module 10 Challenge Climate App<br/>"
         f"Available Routes:<br/>"
-        f"/precipitation/<br/>"
-        f"/stations/<br/>"
-        f"/tobs/<br/>"
+        f"/api/v1.0/precipitation<br/>"
+        f"/api/v1.0/stations<br/>"
+        f"/api/v1.0/tobs<br/>"
+        f"/api/v1.0/YYYMMDD<start_date><br/>"
+        f"/api/v1.0/YYYYMMDD<start_date>/YYYYMMDD<end_date><br/>"
     )
 
 
-@app.route("/precipitation/")
+@app.route("/api/v1.0/precipitation/")
 def precip():
     #create session from Python to the DB
     session = Session(engine)
@@ -64,11 +66,10 @@ def precip():
     #close session
     session.close()
     
-    print("Server received request for 'precipitation' page...")
     return jsonify(prcp_dict)
 
     
-@app.route("/stations/")
+@app.route("/api/v1.0/stations/")
 def stats():
 
      #create session from Python to the DB
@@ -83,10 +84,9 @@ def stats():
     #close session
     session.close()
     
-    print("Server received request for 'stations' page...")
     return jsonify(stations_list)
 
-@app.route("/tobs/")
+@app.route("/api/v1.0/tobs/")
 def tobs():
 
      #create session from Python to the DB
@@ -103,69 +103,49 @@ def tobs():
     
     #close session
     session.close()
-    print("Server received request for 'tobs' page...")
     return jsonify(station_freq_list)
 
 @app.route("/api/v1.0/<start_date>")
-def start(start_date=None):
+@app.route("/api/v1.0/<start_date>/<end_date>")
+
+def start(start_date=None, end_date=None):
 
      #create session from Python to the DB
     session = Session(engine)
-    #return 
+    #define start date
     start_date = dt.datetime.strptime(start_date, "%Y%m%d")
-    #query
-    results = session.query(measurement.tobs).\
-    filter(measurement.date == start_date).all()
+    end_date = dt.datetime.strptime(end_date, "%Y%m%d")
     
-    results = session.query(func.min(measurement.tobs),\
+    if not end_date:
+   
+    #query if there's no end date
+        results = session.query(func.min(measurement.tobs),\
             func.avg(measurement.tobs),\
             func.max(measurement.tobs)).\
             filter(measurement.date >= start_date).all()
-    
+        
+        results_list = list(np.ravel(results))
+        print(results_list)
    
-    results_list = list(np.ravel(results))
-    # for each in results:
-    #    results_list.append(each[0])
-    
     #close session
-    session.close()
-   
+        session.close()
+        
+        return jsonify(results_list)
 
-    print("Server received request for 'start' page...")
-    return jsonify(results_list)
-
-#For the start/end route, it is pretty much the exact same steps, except you add 
-# the end_date parameter to the route, the function defitinition, and the filter. 
-# You just also have to make sure that you also convert the end_date variable to a 
-# datetime datatype like you did for start_date
-@app.route("/api/v1.0/<start_date><end_date>")
-def start_end(start_date_end_date=None):
-
-     #create session from Python to the DB
-    session = Session(engine)
-    #return 
-    start_date_end_date = dt.datetime.strptime(start_date_end_date, "%Y%m%d")
-    #query
-    results = session.query(measurement.tobs).\
-    filter(measurement.date == start_date_end_date).all()
-    
     results = session.query(func.min(measurement.tobs),\
-            func.avg(measurement.tobs),\
-            func.max(measurement.tobs)).\
-            filter(measurement.date >= start_date).\
-            filter(measurement.date <= start_date).all()
-    
+        func.avg(measurement.tobs),\
+        func.max(measurement.tobs)).\
+        filter(measurement.date >= start_date).\
+        filter(measurement.date <= end_date).all() 
    
     results_list = list(np.ravel(results))
-    # for each in results:
-    #    results_list.append(each[0])
-    
+    print(results_list)
+   
     #close session
     session.close()
-   
-
-    print("Server received request for 'start' page...")
+        
     return jsonify(results_list)
 
+  
 if __name__ == "__main__":
     app.run(debug=True)
